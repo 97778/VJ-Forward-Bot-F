@@ -9,7 +9,7 @@ from pyrogram import Client, filters
 from .test import get_configs, update_configs, CLIENT, parse_buttons
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from .db import connect_user_db
-from pyrogram.errors import MessageNotModified  # Imported to catch menu edit crashes
+from pyrogram.errors import MessageNotModified  
 
 CLIENT = CLIENT()
 
@@ -34,7 +34,7 @@ async def settings_query(bot, query):
   i, type = query.data.split("#")
   buttons = [[InlineKeyboardButton('back', callback_data="settings#main")]]
   
-  try: # Outer try block to smoothly catch any unhandled MessageNotModified errors
+  try: 
       if type=="main":
          await query.message.edit_text(
            "<b>Hᴇʀᴇ Is Tʜᴇ Sᴇᴛᴛɪɴɢs Pᴀɴᴇʟ⚙\n\nᴄʜᴀɴɢᴇ ʏᴏᴜʀ sᴇᴛᴛɪɴɢs ᴀs ʏᴏᴜʀ ᴡɪsʜ 👇</b>",
@@ -316,10 +316,18 @@ async def settings_query(bot, query):
 
       elif type.startswith("updatefilter"):
          i, key, value = type.split('-')
-         if value=="True":
-            await update_configs(user_id, key, False)
+         new_status = False if value == "True" else True
+         
+         # Fixed nested database structure tracking logic
+         root_filters = ['forward_tag', 'duplicate', 'protect']
+         if key in root_filters:
+             await update_configs(user_id, key, new_status)
          else:
-            await update_configs(user_id, key, True)
+             current_config = await get_configs(user_id)
+             filters_dict = current_config.get('filters', {})
+             filters_dict[key] = new_status
+             await update_configs(user_id, 'filters', filters_dict)
+
          if key in ['poll', 'protect', 'voice', 'animation', 'sticker', 'duplicate']:
             return await query.edit_message_reply_markup(
                reply_markup=await next_filters_buttons(user_id)) 
@@ -465,7 +473,6 @@ async def settings_query(bot, query):
         await query.answer(alert, show_alert=True)
   
   except MessageNotModified:
-      # Automatically captures identical layout update triggers and avoids terminal exceptions
       await query.answer()
 
 # Don't Remove Credit Tg - @VJ_Botz
@@ -503,7 +510,7 @@ def main_buttons():
        ],[
        InlineKeyboardButton('🖋️ Cᴀᴘᴛɪᴏɴ',
                     callback_data=f'settings#caption'),
-       InlineKeyboardButton('⏹ Bᴜᴛᴛᴏɴ',
+       InlineKeyboardButton('⏹ Bᴜᴛᴛᴏัน',
                     callback_data=f'settings#button')
        ],[
        InlineKeyboardButton('🕵‍♀ Fɪʟᴛᴇʀs 🕵‍♀',
